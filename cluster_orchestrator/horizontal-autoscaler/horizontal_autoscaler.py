@@ -5,7 +5,12 @@ from flask.views import MethodView
 from flask_swagger_ui import get_swaggerui_blueprint
 from flask_smorest import Blueprint, Api
 from marshmallow import INCLUDE, Schema, fields
+
 from hca_logging import configure_logging
+from system_manager_requests import (
+    login_to_system_manager,
+    get_service_cluster_id,
+)
 from helper import (
     service_autoscaler,
     get_service_autoscaler_data,
@@ -13,7 +18,6 @@ from helper import (
     delete_service_autoscaler,
     restore_scaling,
 )
-from other_requests import login_to_system_manager, get_service_cluster_id
 
 
 MY_PORT = os.environ.get("MY_PORT", "10180")
@@ -42,7 +46,7 @@ scalerblp = Blueprint(
     "horizontal autoscaler",
     "applications",
     url_prefix="/api/v1/hca",
-    description="Operations on applications",
+    description="Operations on Horizontal Autoscaler",
 )
 
 app.register_blueprint(swaggerui_blueprint)
@@ -51,6 +55,10 @@ app.register_blueprint(swaggerui_blueprint)
 class AutoscalerFilterSchema(Schema):
     """
     Schema for the autoscaler filter.
+    cpu_threshold: The threshold for the cpu usage.
+    ram_threshold: The threshold for the ram usage.
+    min_replicas: The minimum number of replicas.
+    max_replicas: The maximum number of replicas.
     """
     cpu_threshold = fields.Int()
     ram_threshold = fields.Int()
@@ -61,6 +69,9 @@ class AutoscalerFilterSchema(Schema):
 class ManualScaleFilterSchema(Schema):
     """
     Schema for the manual scale filter.
+    service_id: The id of the service.
+    cluster_id: The id of the cluster.
+    scale_type: The type of the scale.
     """
     service_id = fields.String()
     cluster_id = fields.String(missing=None)
@@ -69,11 +80,17 @@ class ManualScaleFilterSchema(Schema):
 
 @app.route("/")
 def hello_world():
+    """
+    Return a message to the user.
+    """
     return "Hello, World! This is the cluster_horizontal_autoscaler.\n"
 
 
 @app.route("/status")
 def status():
+    """
+    Return a message to the user.
+    """
     return "ok"
 
 
@@ -158,6 +175,9 @@ class HorizontalAutoscalerController(MethodView):
 
 @scalerblp.route("/manual")
 class HorizontalScaleManualyByCluster(MethodView):
+    """
+    Scale a service manually by cluster.
+    """
     @scalerblp.arguments(ManualScaleFilterSchema(unknown=INCLUDE), location="json")
     def post(self, data, **kwargs):
         """
@@ -171,6 +191,7 @@ class HorizontalScaleManualyByCluster(MethodView):
 
 
 api.register_blueprint(scalerblp)
+
 
 if __name__ == "__main__":
     login_to_system_manager()

@@ -1,16 +1,7 @@
 import os
 import json
 import requests
-from pymongo import MongoClient
-from bson.objectid import ObjectId
 
-MONGO_CLUSTER_URI = os.environ.get("MONGO_CLUSTER_URI", "mongodb://46.249.99.42:10107/")
-DATABASE_CLUSTER_NAME = os.environ.get("DATABASE_CLUSTER_NAME", "jobs")
-COLLECTION_CLUSTER_NAME = os.environ.get("COLLECTION_CLUSTER_NAME", "jobs")
-
-MONGO_ROOT_URI = os.environ.get("MONGO_ROOT_URI", "mongodb://46.249.99.42:10007/")
-DATABASE_ROOT_NAME = os.environ.get("DATABASE_ROOT_NAME", "clusters")
-COLLECTION_ROOT_NAME = os.environ.get("COLLECTION_ROOT_NAME", "clusters")
 
 SYSTEM_MANAGER_ADDR = (
     "http://"
@@ -24,7 +15,7 @@ token = None
 
 def login_to_system_manager():
     """
-    Login to the System Manager.
+    Login to the System Manager and get the token.
     """
     request_address = SYSTEM_MANAGER_ADDR + "/api/auth/login"
     try:
@@ -35,13 +26,27 @@ def login_to_system_manager():
             print("Successfully logged in to System Manager")
         else:
             print(f"Failed to login to System Manager. Status code: {response.status_code}")
+    except requests.exceptions.Timeout as e:
+         print(f"Timeout error logging in to System Manager: {e}")
+         return None
+    except requests.exceptions.ConnectionError as e:
+         print(f"Connection error logging in to System Manager: {e}")
+         return None
+    except requests.exceptions.HTTPError as e:
+         print(f"HTTP error logging in to System Manager: {e}")
+         return None
     except requests.exceptions.RequestException as e:
+         print(f"Request error logging in to System Manager: {e}")
+         return None
+    except Exception as e:
         print(f"Error logging in to System Manager: {e}")
+        return None
+    
 
 
 def manager_deploy_request(cluster_id, job_id):
     """
-    Deploy a job to a cluster.
+    Deploy a job to a cluster and return the response.
     """
     request_address = SYSTEM_MANAGER_ADDR + "/api/result/deploy"
     try:
@@ -58,13 +63,26 @@ def manager_deploy_request(cluster_id, job_id):
         else:
             print(f"Failed to deploy job {job_id} to cluster {cluster_id}. Status code: {response.status_code}")
 
-    except requests.exceptions.RequestException:
-        print("Calling System Manager /api/result/deploy not successful.")
+    except requests.exceptions.Timeout as e:
+        print(f"Timeout error deploying job {job_id} to cluster {cluster_id}: {e}")
+        return None
+    except requests.exceptions.ConnectionError as e:
+        print(f"Connection error deploying job {job_id} to cluster {cluster_id}: {e}")
+        return None
+    except requests.exceptions.HTTPError as e:
+        print(f"HTTP error deploying job {job_id} to cluster {cluster_id}: {e}")
+        return None
+    except requests.exceptions.RequestException as e:
+        print(f"Request error deploying job {job_id} to cluster {cluster_id}: {e}")
+        return None
+    except Exception as e:
+        print(f"Error deploying job {job_id} to cluster {cluster_id}: {e}")
+        return None
 
 
 def delete_instance_from_service(service_id, instance_id):
     """
-    Delete an instance from a service.
+    Delete an instance from a service and return the response.
     """
     request_address = SYSTEM_MANAGER_ADDR + f"/api/service/{service_id}/instance/{instance_id}"
     try:
@@ -77,13 +95,26 @@ def delete_instance_from_service(service_id, instance_id):
         else:
             print(f"Failed to delete instance {instance_id} from service {service_id}. Status code: {response.status_code}")
 
-    except requests.exceptions.RequestException:
-        print("Calling System Manager /api/service/{service_id}/instance/{instance_id} not successful.")
+    except requests.exceptions.Timeout as e:
+        print(f"Timeout error deleting instance {instance_id} from service {service_id}: {e}")
+        return None
+    except requests.exceptions.ConnectionError as e:
+        print(f"Connection error deleting instance {instance_id} from service {service_id}: {e}")
+        return None
+    except requests.exceptions.HTTPError as e:
+        print(f"HTTP error deleting instance {instance_id} from service {service_id}: {e}")
+        return None
+    except requests.exceptions.RequestException as e:
+        print(f"Request error deleting instance {instance_id} from service {service_id}: {e}")
+        return None
+    except Exception as e:
+        print(f"Error deleting instance {instance_id} from service {service_id}: {e}")
+        return None
 
 
 def create_instance_for_service(service_id):
     """
-    Create a new instance for a service.
+    Create a new instance for a service and return the response.
     """
     print("Creating new instance for service...")
     request_address = SYSTEM_MANAGER_ADDR + f"/api/service/{service_id}/instance"
@@ -97,38 +128,27 @@ def create_instance_for_service(service_id):
         else:
             print(f"Failed to create instance for service {service_id}. Status code: {response.status_code}")
 
+    except requests.exceptions.Timeout as e:
+        print(f"Timeout error creating instance for service {service_id}: {e}")
+        return None
+    except requests.exceptions.ConnectionError as e:
+        print(f"Connection error creating instance for service {service_id}: {e}")
+        return None
+    except requests.exceptions.HTTPError as e:
+        print(f"HTTP error creating instance for service {service_id}: {e}")
+        return None
     except requests.exceptions.RequestException as e:
-        print(f"Error creating instance for service {service_id}: {e}")
-
-
-def get_service_data(service_id):
-    """Fetch service data from MongoDB and extract CPU and RAM usage for all instances."""
-    try:
-        client = MongoClient(MONGO_CLUSTER_URI)
-        db = client[DATABASE_CLUSTER_NAME]
-        collection = db[COLLECTION_CLUSTER_NAME]
-
-        service_data = collection.find_one({"system_job_id": service_id})
-
-        if not service_data:
-            print(f"No data found for service_id: {service_id}")
-
-        instance_list = service_data.get("instance_list", [])
-        cpu_usage = [float(instance.get("cpu", 0)) for instance in instance_list]
-        ram_usage = [float(instance.get("memory", 0)) for instance in instance_list]
-
-        return {
-            "cpu_per_container": cpu_usage,
-            "ram_per_container": ram_usage,
-            "replica_count": len(instance_list),
-        }
-
+        print(f"Request error creating instance for service {service_id}: {e}")
+        return None
     except Exception as e:
-        print(f"Error fetching service data: {e}")
+        print(f"Error creating instance for service {service_id}: {e}")
+        return None
 
 
 def get_instance_list(service_id):
-    """Get list of instances for a service from the System Manager API."""
+    """
+    Get list of instances for a service from the System Manager API and return the data.
+    """
     request_address = SYSTEM_MANAGER_ADDR + f"/api/service/{service_id}"
     try:
         response = requests.get(request_address, headers={"Authorization": f"Bearer {token}"})
@@ -146,34 +166,22 @@ def get_instance_list(service_id):
         else:
             print(f"Failed to get instances for service {service_id}. Status code: {response.status_code}")
 
+    except requests.exceptions.Timeout as e:
+        print(f"Timeout error getting instances for service {service_id}: {e}")
+        return None
+    except requests.exceptions.ConnectionError as e:
+        print(f"Connection error getting instances for service {service_id}: {e}")
+        return None
+    except requests.exceptions.HTTPError as e:
+        print(f"HTTP error getting instances for service {service_id}: {e}")
+        return None
     except requests.exceptions.RequestException as e:
+        print(f"Request error getting instances for service {service_id}: {e}")
+        return None
+    except Exception as e:
         print(f"Error getting instances for service {service_id}: {e}")
+        return None
 
-
-def is_cluster_full(cluster_id):
-    """
-    Check if a cluster is full.
-    """
-    client = MongoClient(MONGO_ROOT_URI)
-    db = client[DATABASE_ROOT_NAME]
-    collection = db[COLLECTION_ROOT_NAME]
-
-    cluster_data = collection.find_one({"_id": ObjectId(cluster_id)})
-    if not cluster_data:
-        return False
-
-    cpu_history = cluster_data.get("cpu_history", [])
-    memory_history = cluster_data.get("memory_history", [])
-    total_cpu_cores = cluster_data.get("total_cpu_cores", 0)
-
-    if not cpu_history or not memory_history:
-        return False
-
-    last_cpu = cpu_history[-1]["value"]
-    last_memory = memory_history[-1]["value"]
-
-    # return last_cpu >= (total_cpu_cores - (total_cpu_cores * 0.20)) or last_memory >= 80
-    return last_cpu >= (total_cpu_cores - (total_cpu_cores * 0.80)) or last_memory >= 80
 
 def get_service_cluster_id(service_id):
     """
@@ -208,6 +216,18 @@ def get_service_cluster_id(service_id):
             print(f"Failed to get service data. Status code: {response.status_code}")
             return None
 
+    except requests.exceptions.Timeout as e:
+        print(f"Timeout error getting service data: {e}")
+        return None
+    except requests.exceptions.ConnectionError as e:
+        print(f"Connection error getting service data: {e}")
+        return None
+    except requests.exceptions.HTTPError as e:
+        print(f"HTTP error getting service data: {e}")
+        return None
     except requests.exceptions.RequestException as e:
+        print(f"Request error getting service data: {e}")
+        return None
+    except Exception as e:
         print(f"Error getting service data: {e}")
         return None

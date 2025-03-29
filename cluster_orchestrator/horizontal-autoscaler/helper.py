@@ -1,16 +1,23 @@
 from monitor_container_state import ServiceScaler
 from flask import jsonify
-from other_requests import (
-    create_instance_for_service,
+
+from horizontal_autoscaler_db import (
+    restore_scaling_configs,
+    get_scaling_config,
     get_service_data,
+)
+from system_manager_requests import (
+    create_instance_for_service,
     get_instance_list,
     delete_instance_from_service,
     manager_deploy_request,
 )
-from horizontal_autoscaler_db import restore_scaling_configs, get_scaling_config
 
 
 def get_service_metrics(service_id):
+    """
+    Get the service metrics for a service and return the data.
+    """
     return get_service_data(service_id)
 
 
@@ -25,6 +32,7 @@ def restore_scaling():
 def scale_service_to_count(service_id, new_replica_count, current_replicas):
     """
     Scale a service to a new replica count.
+    it can be scale up or scale down.
     """
     if new_replica_count > current_replicas:
         # Scale UP
@@ -40,7 +48,7 @@ def scale_service_to_count(service_id, new_replica_count, current_replicas):
 
 def service_autoscaler(autoscaler_data, service_id, check_interval, cluster_id):
     """
-    Start the service autoscaler.
+    Start the service autoscaler and monitor the service.
     """
     scaler = ServiceScaler(get_service_metrics, scale_service_to_count, scale_up_service_by_cluster)
     scaler.start_monitoring_services(service_id, autoscaler_data, check_interval, cluster_id)
@@ -48,7 +56,7 @@ def service_autoscaler(autoscaler_data, service_id, check_interval, cluster_id):
 
 def delete_service_autoscaler(service_id):
     """
-    Delete the service autoscaler.
+    Delete the service autoscaler and stop the monitoring service.
     """
     scaler = ServiceScaler(get_service_metrics, scale_service_to_count, scale_up_service_by_cluster)
     scaler.stop_monitoring_service(service_id)
@@ -56,14 +64,15 @@ def delete_service_autoscaler(service_id):
 
 def get_service_autoscaler_data(service_id):
     """
-    Get the service autoscaler data.
+    Get the service autoscaler data from the database and return the data.
     """
     return get_scaling_config(service_id)
 
 
 def scale_service_up(service_id):
     """
-    Scale a service up.
+    Scale a service up by creating a new instance
+    and return the response.
     """
     service_data = get_service_data(service_id)
     if service_data is None:
@@ -73,7 +82,8 @@ def scale_service_up(service_id):
 
 def scale_service_down(service_id):
     """
-    Scale a service down.
+    Scale a service down by deleting the last instance
+    and return the response.
     """
     service_data = get_service_data(service_id)
     if service_data is None:
@@ -96,7 +106,8 @@ def scale_up_service_by_cluster(service_id, cluster_id):
 
 def manual_scale(data):
     """
-    Manually scale a service.
+    Manually scale a service by cluster id or by service id
+    and return the response.
     """
     scale_type = data["scale_type"]  # Either "up" or "down"
     service_id = data["service_id"]
