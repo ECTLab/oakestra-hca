@@ -33,7 +33,15 @@ def login_to_system_manager():
             print("Successfully logged in to System Manager")
         else:
             print(f"Failed to login to System Manager. Status code: {response.status_code}")
+    except requests.exceptions.Timeout as e:
+        print(f"Timeout error logging in to System Manager: {e}")
+    except requests.exceptions.ConnectionError as e:
+        print(f"Connection error logging in to System Manager: {e}")
+    except requests.exceptions.HTTPError as e:
+        print(f"HTTP error logging in to System Manager: {e}")
     except requests.exceptions.RequestException as e:
+        print(f"Error logging in to System Manager: {e}")
+    except Exception as e:
         print(f"Error logging in to System Manager: {e}")
 
 
@@ -48,8 +56,16 @@ def deploy_request(cluster_id, job_id):
             json={"cluster_id": cluster_id, "job_id": job_id},
             headers={"Authorization": f"Bearer {token}"}
         )
-    except requests.exceptions.RequestException:
-        print("Calling System Manager /api/result/deploy not successful.")
+    except requests.exceptions.Timeout as e:
+        print(f"Timeout error deploying job to cluster {cluster_id}: {e}")
+    except requests.exceptions.ConnectionError as e:
+        print(f"Connection error deploying job to cluster {cluster_id}: {e}")
+    except requests.exceptions.HTTPError as e:
+        print(f"HTTP error deploying job to cluster {cluster_id}: {e}")
+    except requests.exceptions.RequestException as e:
+        print(f"Error deploying job to cluster {cluster_id}: {e}")
+    except Exception as e:
+        print(f"Error deploying job to cluster {cluster_id}: {e}")
 
 
 def get_service_cluster_id(service_id):
@@ -82,7 +98,19 @@ def get_service_cluster_id(service_id):
         else:
             print(f"Failed to get service data. Status code: {response.status_code}")
             return None
+    except requests.exceptions.Timeout as e:
+        print(f"Timeout error getting service data: {e}")
+        return None
+    except requests.exceptions.ConnectionError as e:
+        print(f"Connection error getting service data: {e}")
+        return None
+    except requests.exceptions.HTTPError as e:
+        print(f"HTTP error getting service data: {e}")
+        return None
     except requests.exceptions.RequestException as e:
+        print(f"Error getting service data: {e}")
+        return None
+    except Exception as e:
         print(f"Error getting service data: {e}")
         return None
 
@@ -103,6 +131,19 @@ def get_cluster_ip_by_id(cluster_id):
         else:
             print(f"Failed to get cluster data. Status code: {response.status_code}")
             return None
+    
+    except requests.exceptions.Timeout as e:
+        print(f"Timeout error getting cluster IP for cluster {cluster_id}: {e}")
+        return None
+    except requests.exceptions.ConnectionError as e:
+        print(f"Connection error getting cluster IP for cluster {cluster_id}: {e}")
+        return None
+    except requests.exceptions.HTTPError as e:
+        print(f"HTTP error getting cluster IP for cluster {cluster_id}: {e}")
+        return None
     except requests.exceptions.RequestException as e:
+        print(f"Error getting cluster data: {e}")
+        return None
+    except Exception as e:
         print(f"Error getting cluster data: {e}")
         return None

@@ -1,7 +1,7 @@
 import os
 from pymongo import MongoClient
 
-from other_requests import get_service_cluster_id
+from system_manager_requests import get_service_cluster_id
 
 
 MONGO_ROOT_URI = os.environ.get("MONGO_ROOT_URI", "mongodb://46.249.99.42:10007/")
@@ -45,7 +45,7 @@ def get_service_cluster(service_id):
 def find_cluster(service_id):
     """
     Find cluster ID for a service by calling system manager API
-    and return the cluster id. 
+    and return the cluster id.
     """
     try:
         response = get_service_cluster_id(service_id)
