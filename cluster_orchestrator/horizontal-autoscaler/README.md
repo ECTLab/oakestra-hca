@@ -2,41 +2,40 @@
 
 ## Overview
 
-The `cluster_orchestrator/horizontal-autoscaler` is a Kubernetes-native service responsible for monitoring and managing service scaling within a single cluster. It dynamically adjusts the number of service replicas based on real-time CPU, memory, and custom metrics.
+The `cluster_orchestrator/horizontal-autoscaler` is a critical component of a distributed auto-scaling system, responsible for dynamically adjusting the number of service replicas within a specific cluster. This ensures optimal resource utilization and maintains application performance based on real-time metrics.
 
-This document provides an in-depth guide on the functionality, setup, and operation of the cluster-level horizontal auto-scaler.
+This document provides a comprehensive guide to understanding, configuring, and using the cluster-level horizontal auto-scaler.
 
 ---
 
 ## Features
 
-- **Per-Cluster Auto-Scaling**: Adjusts replicas within a single Kubernetes cluster.
-- **Persistence with MongoDB**: Stores scaling configurations and historical data.
-- **Threshold-Based Scaling**: Uses CPU and memory thresholds to scale services.
-- **Auto-Recovery**: Restores scaling configurations on restart.
-- **Cluster-Wide Load Balancing**: Distributes workloads efficiently.
-- **Event-Driven Scaling**: Reacts to workload surges dynamically.
-- **Concurrency Management**: Uses multi-threading for efficient monitoring.
+- **Cluster-Specific Auto-Scaling**: Independently manages scaling within a single cluster.
+- **Persistent State Storage with MongoDB**: Ensures continuity across restarts.
+- **Real-Time Monitoring**: Tracks container CPU, memory, and other metrics.
+- **Threshold-Based Scaling**: Adjusts replicas based on preconfigured thresholds.
+- **Event-Driven Scaling**: Responds dynamically to workload spikes.
+- **Auto-Recovery**: Resumes previous scaling tasks upon restart.
+- **Logging and Debugging**: Provides extensive logs for monitoring and troubleshooting.
 
 ---
 
 ## Architecture
 
-The cluster orchestrator operates as follows:
+The cluster orchestrator operates at the individual cluster level and performs the following tasks:
 
-1. **Collects Metrics** from monitored services.
-2. **Analyzes Thresholds** to determine scaling actions.
-3. **Communicates with Kubernetes** to scale services.
-4. **Persists Scaling Data** in MongoDB for recovery.
-5. **Reinstates Scaling Operations** after restarts.
+1. **Monitors running containers** to track CPU and memory utilization.
+2. **Stores and retrieves scaling configurations** from MongoDB.
+3. **Decides scaling actions** based on threshold rules.
+4. **Communicates with the root orchestrator**, if present, for cross-cluster coordination.
+5. **Automatically recovers and resumes scaling** based on stored states.
 
 ### Components
 
-- **Service Monitor**: Collects and processes service metrics.
-- **Scaling Decision Engine**: Determines when to scale services up or down.
-- **MongoDB Storage**: Stores configurations and operational state.
-- **Kubernetes Controller**: Interacts with Kubernetes API to modify replicas.
-- **Recovery Mechanism**: Restores previously running auto-scalers.
+- **Scaling Controller**: Manages decision-making for scaling up or down.
+- **MongoDB Storage Layer**: Maintains persistent scaling data.
+- **Container Monitor**: Collects real-time service metrics.
+- **Logging Mechanism**: Records operational details for auditing and debugging.
 
 ---
 
@@ -44,17 +43,14 @@ The cluster orchestrator operates as follows:
 
 ### Prerequisites
 
-- Kubernetes cluster
 - Python 3.8+
-- MongoDB instance
-- Helm for Kubernetes deployment
-- Docker & Kubernetes CLI
+- MongoDB
 
 ### Deployment Steps
 
 #### 1. Clone Repository
 ```sh
-$ git clone https://github.com/your-repo/cluster_orchestrator/horizontal-autoscaler.git
+$ git clone https://github.com/ECTLab/oakestra-hca.git
 $ cd cluster_orchestrator/horizontal-autoscaler
 ```
 
@@ -65,37 +61,73 @@ $ pip install -r requirements.txt
 
 #### 3. Configure Environment Variables
 ```sh
-export MONGO_URI="mongodb://localhost:27017"
-export KUBERNETES_CONFIG="~/.kube/config"
+export SYSTEM_MANAGER_URL=localhost
+export SYSTEM_MANAGER_PORT=10000
+export MY_PORT=10180
+export CHECK_INTERVAL=10
+export MONGO_CLUSTER_URI=mongodb://localhost:10007/
+export DATABASE_CLUSTER_HCA=horizontal_autoscaler
+export COLLECTION_CLUSTER_HCA=service_monitoring
 ```
 
-#### 4. Deploy to Kubernetes
+#### 4. Start the Auto-Scaler
 ```sh
-$ kubectl apply -f deployment.yaml
-```
-
-#### 5. Start the Auto-Scaler
-```sh
-$ python main.py
+$ python3 horizontal_autoscaler.py
 ```
 
 ---
 
 ## Usage
 
-### Start Monitoring a Service
+### API Endpoints
+
+| Method | Endpoint | Description |
+|--------|-------------|-------------|
+| GET | `/api/v1/hca/<service_id>` | Retrieves service data |
+| POST | `/api/v1/hca/<service_id>` | Starts monitoring a service |
+| PUT | `/api/v1/hca/<service_id>` | Updates monitoring configuration |
+| DELETE | `/api/v1/hca/<service_id>` | Stops monitoring a service |
+| POST | `/api/v1/hca/manual` | Manually scales a service |
+
+### Example Commands
+
+#### Retrieve Service Data
 ```sh
-curl -X POST http://localhost:5000/start-scaling -d '{ "service_id": "web-app", "cpu_threshold": 75, "ram_threshold": 80, "max_replicas": 10, "min_replicas": 2 }'
+curl -X GET http://localhost:10180/api/v1/hca/<service_id>
 ```
 
-### Stop Monitoring a Service
+#### Start Monitoring a Service
 ```sh
-curl -X POST http://localhost:5000/stop-scaling -d '{ "service_id": "web-app" }'
+curl -X POST http://localhost:10180/api/v1/hca/<service_id> --data '{
+    "cpu_threshold": 1,
+    "ram_threshold": 40,
+    "max_replicas": 4,
+    "min_replicas": 1
+}'
 ```
 
-### Check Scaling Status
+#### Update Scaling Configuration
 ```sh
-curl -X GET http://localhost:5000/status
+curl -X PUT http://localhost:10180/api/v1/hca/<service_id> --data '{
+    "cpu_threshold": 1,
+    "ram_threshold": 40,
+    "max_replicas": 8,
+    "min_replicas": 1
+}'
+```
+
+#### Stop Monitoring a Service
+```sh
+curl -X DELETE http://localhost:10180/api/v1/hca/<service_id>
+```
+
+#### Manually Scale a Service
+```sh
+curl -X POST http://localhost:10180/api/v1/hca/manual --data '{
+    "scale_type": "up",  // could be up or down
+    "service_id": "67e142b1adbe153707b38bb8",
+    "cluster_id": "67dda17adea7a1ce9586ad94"
+}'
 ```
 
 ---
@@ -103,25 +135,9 @@ curl -X GET http://localhost:5000/status
 ## Auto-Recovery Mechanism
 
 ### How It Works
-1. On startup, the orchestrator queries MongoDB for active scaling services.
-2. It retrieves saved scaling configurations.
-3. It automatically restarts monitoring for previously managed services.
-
-### Manual Recovery
-If auto-recovery fails, restart monitoring manually:
-```sh
-$ python recover.py
-```
-
----
-
-## API Endpoints
-
-| Method | Endpoint | Description |
-|--------|-------------|-------------|
-| POST | `/start-scaling` | Starts monitoring a service |
-| POST | `/stop-scaling` | Stops monitoring a service |
-| GET | `/status` | Retrieves the current scaling status |
+1. On startup, the orchestrator queries MongoDB for previous scaling tasks.
+2. It retrieves stored scaling configurations.
+3. It restarts monitoring services automatically.
 
 ---
 
@@ -129,22 +145,19 @@ $ python recover.py
 
 ### Check Logs
 ```sh
-$ tail -f logs/autoscaler.log
+$ tail -f logs/hca.log
 ```
 
 ### View MongoDB Records
 ```sh
 $ mongo
-> use autoscaler_db
-> db.scaling_configs.find()
+> use horizontal_autoscaler
+> db.service_monitoring.find()
 ```
 
 ---
 
 ## Conclusion
 
-The `cluster_orchestrator/horizontal-autoscaler` is a critical component in ensuring optimal resource allocation within Kubernetes clusters. Its ability to automatically adjust workloads, persist scaling data, and restore operations makes it a powerful tool for maintaining service efficiency and availability.
-
-For additional support, open an issue on GitHub or contact the development team.
-
+The `cluster_orchestrator/horizontal-autoscaler` ensures that Kubernetes services within a cluster dynamically adjust to fluctuating workloads. With auto-recovery, persistent storage, and real-time monitoring, it provides a reliable solution for maintaining optimal resource usage and application performance.
 
