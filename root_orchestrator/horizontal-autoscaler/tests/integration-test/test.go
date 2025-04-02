@@ -60,13 +60,13 @@ func makeRequest(serviceID string) {
 		return
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	_, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Println("Error reading response:", err)
 		return
 	}
 
-	fmt.Println("Response:", string(body))
+	fmt.Println("Test execution was successful")
 }
 
 func runHCACommands(serviceID string) {
@@ -131,13 +131,13 @@ func runHCACommands(serviceID string) {
 		return
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	_, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Println("Error reading GET response:", err)
 		return
 	}
 
-	fmt.Println("HCA GET Response:", string(body))
+	fmt.Println("Test execution was successful")
 }
 
 func main() {

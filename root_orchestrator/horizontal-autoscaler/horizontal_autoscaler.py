@@ -61,6 +61,7 @@ class AutoscalerFilterSchema(Schema):
     min_replicas = fields.Int()
     max_replicas = fields.Int()
 
+
 class ManualScaleFilterSchema(Schema):
     """
     Schema for the manual scale filter.
