@@ -63,7 +63,7 @@ def restore_scaling_configs(scaler):
         for config in configs:
             service_id = config["service_id"]
             cluster_id = config["cluster_id"]
-            check_interval = config.get("check_interval", 30)
+            check_interval = config.get("check_interval", 3)
             print(f"Restoring monitoring for service {service_id}")
             scaler.start_monitoring_services(service_id, config, check_interval, cluster_id)
     except Exception as e:

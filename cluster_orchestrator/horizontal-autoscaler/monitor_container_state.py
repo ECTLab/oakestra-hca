@@ -11,7 +11,7 @@ from horizontal_autoscaler_db import (
 )
 
 
-COOLDOWN_SECONDS = os.environ.get("COOLDOWN_SECONDS", 30)
+COOLDOWN_SECONDS = os.environ.get("COOLDOWN_SECONDS", 5)
 
 
 class ServiceScaler:
@@ -63,54 +63,55 @@ class ServiceScaler:
         """
         Monitor a single service and scale it up or down based on the state of the service.
         """
-        print(f"Monitoring with Thread {threading.current_thread().name} service {service_id}")
-        try:
-            scaling_config = get_scaling_config(service_id)
-            if not scaling_config:
-                print(f"No scaling config found for service {service_id}")
-                return
+        with self.data_lock:
+            print(f"Monitoring with Thread {threading.current_thread().name} service {service_id}")
+            print("Thread count:", len(self.running_threads))
+            try:
+                scaling_config = get_scaling_config(service_id)
+                if not scaling_config:
+                    print(f"No scaling config found for service {service_id}")
+                    return
 
-            metrics = self.get_service_metrics(service_id)
-            if not metrics:
-                print(f"Failed to get metrics for service {service_id}, skipping monitoring cycle.")
-                return
+                metrics = self.get_service_metrics(service_id)
+                if not metrics:
+                    print(f"Failed to get metrics for service {service_id}, skipping monitoring cycle.")
+                    return
 
-            print(metrics)
+                print(metrics)
 
-            # calculate the average cpu and ram usage
-            avg_cpu = sum(metrics["cpu_per_container"]) / len(metrics["cpu_per_container"])
-            avg_ram = sum(metrics["ram_per_container"]) / len(metrics["ram_per_container"])
-            overloaded = avg_cpu > scaling_config["cpu_threshold"] or avg_ram > scaling_config["ram_threshold"]
+                # calculate the average cpu and ram usage
+                avg_cpu = sum(metrics["cpu_per_container"]) / len(metrics["cpu_per_container"])
+                avg_ram = sum(metrics["ram_per_container"]) / len(metrics["ram_per_container"])
+                overloaded = avg_cpu > scaling_config["cpu_threshold"] or avg_ram > scaling_config["ram_threshold"]
 
-            current_replicas = metrics["replica_count"]
+                current_replicas = metrics["replica_count"]
 
-            with self.data_lock:
+                # with self.data_lock:
                 if service_id not in self.initial_replicas:
                     self.initial_replicas[service_id] = current_replicas
                 initial_replicas = self.initial_replicas[service_id]
 
-            # Scale Up
-            if overloaded and current_replicas < scaling_config["max_replicas"]:
-                new_replica_count = min(scaling_config["max_replicas"], current_replicas + 1)
-                if is_cluster_full(cluster_id):
-                    self.scale_service_to_count(service_id, new_replica_count, current_replicas)
-                else:
-                    self.scale_up_service_by_cluster(service_id, cluster_id)
+                # with self.data_lock:
+                    # Scale Up
+                if overloaded and current_replicas < scaling_config["max_replicas"]:
+                    new_replica_count = min(scaling_config["max_replicas"], current_replicas + 1)
+                    if is_cluster_full(cluster_id):
+                        self.scale_service_to_count(service_id, new_replica_count, current_replicas)
+                    else:
+                        self.scale_up_service_by_cluster(service_id, cluster_id)
 
-            # Scale Down
-            elif not overloaded and current_replicas > scaling_config["min_replicas"]:
-                with self.data_lock:
+                # Scale Down
+                elif not overloaded and current_replicas > scaling_config["min_replicas"]:
                     last_time = self.last_scale_down_time.get(service_id, 0)
 
                 # check if the cooldown period has passed
-                if (time.time() - last_time) > COOLDOWN_SECONDS:
-                    with self.data_lock:
+                    if (time.time() - last_time) > COOLDOWN_SECONDS:
                         self.last_scale_down_time[service_id] = time.time()
-                    new_replica_count = max(scaling_config["min_replicas"], current_replicas - 1)
-                    self.scale_service_to_count(service_id, new_replica_count, current_replicas)
+                        new_replica_count = max(scaling_config["min_replicas"], current_replicas - 1)
+                        self.scale_service_to_count(service_id, new_replica_count, current_replicas)
 
-        except Exception as e:
-            print(f"Error monitoring service {service_id}: {e}")
+            except Exception as e:
+                print(f"Error monitoring service {service_id}: {e}")
 
     def start_monitoring_services(self, service_id, scaling_config, check_interval, cluster_id):
         """

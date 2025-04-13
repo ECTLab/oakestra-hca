@@ -21,7 +21,7 @@ from helper import (
 
 
 MY_PORT = os.environ.get("MY_PORT", "10180")
-CHECK_INTERVAL = os.environ.get("CHECK_INTERVAL", "15")
+CHECK_INTERVAL = os.environ.get("CHECK_INTERVAL", "3")
 
 my_logger = configure_logging()
 
