@@ -28,8 +28,8 @@ def get_cluster_ip(cluster_id):
     and return the cluster ip.
     """
     try:
-        # response = get_cluster_ip_by_id(cluster_id)
-        response = "127.0.0.1"
+        response = get_cluster_ip_by_id(cluster_id)
+        # response = "127.0.0.1"
         if response:
             return response
         else:
