@@ -108,6 +108,21 @@ services:
       - mongo_rootnet
     logging: *default-logging
 
+  root_cluster_autoscaler:
+    image: docker.io/sadegh81/root-hca:v1
+    pull_policy: always
+    container_name: root_cluster_autoscaler
+    hostname: root_cluster_autoscaler
+    expose:
+      - "10080"
+    ports:
+      - "10080:10080"
+    environment:
+      - MY_PORT=10080
+    depends_on:
+      - system_manager
+      - mongo_root
+      - mongo_rootnet
 
   # Redis for the Cloud Scheduler
   redis:
@@ -320,6 +335,23 @@ services:
       - cluster_redis
       - mongo_cluster
     logging: *default-logging
+
+  cluster_cluster_autoscaler:
+    image: docker.io/sadegh81/cluster-hca:v1
+    pull_policy: always
+    container_name: cluster_cluster_autoscaler
+    hostname: cluster_cluster_autoscaler
+    expose:
+      - "10180"
+    ports:
+      - "10180:10180"
+    environment:
+      - MY_PORT=10180
+    depends_on:
+      - system_manager
+      - root_cluster_autoscaler
+      - mongo_cluster
+      - mongo_clusternet 
 
 
   # Redis for the Cluster Scheduler as Job Queue
