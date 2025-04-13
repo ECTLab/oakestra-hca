@@ -108,11 +108,11 @@ services:
       - mongo_rootnet
     logging: *default-logging
 
-  root_cluster_autoscaler:
+  root_horizontal_autoscaler:
     image: docker.io/sadegh81/root-hca:v1
     pull_policy: always
-    container_name: root_cluster_autoscaler
-    hostname: root_cluster_autoscaler
+    container_name: root_horizontal_autoscaler
+    hostname: root_horizontal_autoscaler
     expose:
       - "10080"
     ports:
@@ -336,11 +336,11 @@ services:
       - mongo_cluster
     logging: *default-logging
 
-  cluster_cluster_autoscaler:
+  cluster_horizontal_autoscaler:
     image: docker.io/sadegh81/cluster-hca:v1
     pull_policy: always
-    container_name: cluster_cluster_autoscaler
-    hostname: cluster_cluster_autoscaler
+    container_name: cluster_horizontal_autoscaler
+    hostname: cluster_horizontal_autoscaler
     expose:
       - "10180"
     ports:
@@ -349,7 +349,7 @@ services:
       - MY_PORT=10180
     depends_on:
       - system_manager
-      - root_cluster_autoscaler
+      - root_horizontal_autoscaler
       - mongo_cluster
       - mongo_clusternet 
 

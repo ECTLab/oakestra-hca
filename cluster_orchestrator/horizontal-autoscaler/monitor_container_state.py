@@ -105,7 +105,7 @@ class ServiceScaler:
                     last_time = self.last_scale_down_time.get(service_id, 0)
 
                 # check if the cooldown period has passed
-                    if (time.time() - last_time) > COOLDOWN_SECONDS:
+                    if (time.time() - last_time) > int(COOLDOWN_SECONDS):
                         self.last_scale_down_time[service_id] = time.time()
                         new_replica_count = max(scaling_config["min_replicas"], current_replicas - 1)
                         self.scale_service_to_count(service_id, new_replica_count, current_replicas)
