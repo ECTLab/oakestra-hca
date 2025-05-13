@@ -17,7 +17,10 @@ root_horizontal_autoscaler:
   ports:
     - "10080:10080"
   environment:
+    - SYSTEM_MANAGER_URL=<YOUR_IP>
     - MY_PORT=10080
+    - CLUSTER_MANAGER_URL=<YOUR_IP>
+    - MONGO_ROOT_URI=mongodb://<YOUR_IP>:10007/
   depends_on:
     - system_manager
     - mongo_root
@@ -40,6 +43,10 @@ cluster_horizontal_autoscaler:
     - "10180:10180"
   environment:
     - MY_PORT=10180
+    - SYSTEM_MANAGER_URL=<YOUR_IP>
+    - CLUSTER_MANAGER_URL=<YOUR_IP>
+    - MONGO_CLUSTER_URI=mongodb://<YOUR_IP>:10107/
+    - MONGO_ROOT_URI=mongodb://<YOUR_IP>:10007/
   depends_on:
     - system_manager
     - root_horizontal_autoscaler
